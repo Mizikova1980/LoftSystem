@@ -10,6 +10,7 @@ const fs = require('fs')
 const path = require('path')
 const News = require('../models/schemas/news')
 const { update } = require('lodash')
+const bCrypt = require('bcryptjs')
 
 
 const auth = (req, res, next) => {
@@ -109,12 +110,26 @@ router.patch('/profile', auth, function(req, res){
         fs.rename(files.avatar.filepath, fileName, function (err) {
                     
         const src = path.join('./', 'assets','img', files.avatar.originalFilename)
+
+        function setPassword (password) {
+         return this.hash = bCrypt.hashSync(password, bCrypt.genSaltSync(10), null)
+          
+        }
+     
+
+
         db.getUserById(userId)
        .then(function(user){
+        function setPassword (password) {
+          return this.hash = bCrypt.hashSync(password, bCrypt.genSaltSync(10), null)
+           
+         }
+        const hash = setPassword(fields.newPassword)
+         console.log(hash)
           user.firstName = fields.firstName
           user.middleName = fields.middleName, 
           user.surName = fields.surName, 
-          user.password = fields.newPassword,
+          user.hash = hash,
           user.image = src,
           user.save()
           .then(function(updateUser){
@@ -129,10 +144,16 @@ router.patch('/profile', auth, function(req, res){
       } else {
         db.getUserById(userId)
         .then(function(user){
-           user.firstName = fields.firstName
+          function setPassword (password) {
+            return this.hash = bCrypt.hashSync(password, bCrypt.genSaltSync(10), null)
+             
+           }
+          const hash = setPassword(fields.newPassword)
+                   
+          user.firstName = fields.firstName
            user.middleName = fields.middleName, 
            user.surName = fields.surName, 
-           user.password = fields.newPassword,
+           user.hash = hash,
            user.save()
            .then(function(updateUser){
              res.send(updateUser)
@@ -145,6 +166,7 @@ router.patch('/profile', auth, function(req, res){
       }
     })
 })
+
 
 
 // получение списка новостей.

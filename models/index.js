@@ -48,7 +48,6 @@
     
  }    
 
-
  module.exports.deleteUser = async (id) => {
      return User.findByIdAndDelete({_id: id})
  }
