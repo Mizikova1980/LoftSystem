@@ -1,7 +1,10 @@
+  
  const User = require('./schemas/user')
  const News = require('./schemas/news')
  const helper = require('./../helpers/serialize.js')
  const db = require('./../models')
+ 
+
 
  module.exports.getUserByName = async (username) => {
     return User.findOne({username})
@@ -9,6 +12,7 @@
 
  module.exports.getUserById = async (id) => {
     return User.findById({_id: id})
+    
  }
 
  module.exports.getUsers = async () => {
@@ -22,12 +26,16 @@
         surName,
         firstName,
         middleName,
-        image: 'https://icons-for-free.com/iconfiles/png/512/profile+user+icon-1320166082804563970.png',
+        image: '',
         permission: {
             chat: { C: true, R: true, U: true, D: true },
             news: { C: true, R: true, U: true, D: true },
             settings: { C: true, R: true, U: true, D: true },
         },
+        accessToken: '',
+        refreshToken: '',
+        accessTokenExpiredAt: '',
+        refreshTokenExpiredAt: '',
     })
     newUser.setPassword(password)
     const user = await newUser.save()
@@ -35,10 +43,10 @@
  }
 
 
- module.exports.updateUser = async (data, user, paramsId) => {
-   const {username, surName, firstName, middleName, password} = data
-
- }
+ module.exports.updateUser = async (id, update) => {
+   return User.findByIdAndUpdate({_id: id}, update)
+    
+ }    
 
 
  module.exports.deleteUser = async (id) => {
@@ -47,35 +55,36 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
  module.exports.getNews = async () => {
    return News.find()
 }
 
-module.exports.createNews = async (data) => {
+module.exports.createNews = async (data, user) => {
    const {text, title} = data
    const newNews = new News ({
-      text,
-      title,
-   })
+      text: data.text,
+      title: data.title,
+      user: {
+          firstName: user.firstName,
+          id: user.id,
+          image: user.image,
+          middleName: user.middleName,
+          surName: user.surName,
+          username: user.username
+      }
+})
    const news = await newNews.save()
    console.log(news)
    return news
 }
 
 
+module.exports.deleteNews = async (id) => {
+   return News.findByIdAndDelete({_id: id})
+    
+ }
 
-
- 
+ module.exports.updateNews = async (id, update) => {
+   return News.findByIdAndUpdate({_id: id}, update)
+    
+ }

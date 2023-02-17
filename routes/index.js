@@ -5,6 +5,11 @@ const passport = require('passport')
 const db = require('./../models')
 const helper = require('./../helpers/serialize')
 const User = require('../models/schemas/user')
+const formidable = require('formidable')
+const fs = require('fs')
+const path = require('path')
+const News = require('../models/schemas/news')
+const { update } = require('lodash')
 
 
 const auth = (req, res, next) => {
@@ -15,12 +20,13 @@ const auth = (req, res, next) => {
         message: 'Unauthorized',
       })
     }
-    // TODO: check IP user
+        
     req.user = user
     next()
   })(req, res, next)
 }
 
+//создание нового пользователя (регистрация)
 router.post('/registration', async (req, res) => {
   const { username } = req.body
 
@@ -29,7 +35,7 @@ router.post('/registration', async (req, res) => {
   if (user) {
     return res.status(409).json({
       message: `Пользователь ${username} существует`
-    }) // TODO:
+    }) 
   }
   try {
     const newUser = await db.createUser(req.body)
@@ -44,6 +50,8 @@ router.post('/registration', async (req, res) => {
   }
 })
 
+
+//авторизация после пользовательского ввода
 router.post('/login', async (req, res, next) => {
   passport.authenticate(
     'local',
@@ -53,7 +61,7 @@ router.post('/login', async (req, res, next) => {
         return next(err)
       }
       if (!user) {
-        return res.status(400).json({ message: 'Не правильный логин/пароль'}) // TODO:
+        return res.status(400).json({ message: 'Не правильный логин/пароль'}) 
       }
       if (user) {
         const token = await tokens.createTokens(user)
@@ -67,71 +75,266 @@ router.post('/login', async (req, res, next) => {
   )(req, res, next)
 })
 
+
+//обновление access-токена
 router.post('/refresh-token', async (req, res) => {
   const refreshToken = req.headers['authorization']
   // TODO: compare token from DB
   const data = await tokens.refreshTokens(refreshToken)
+  console.log(data)
   res.json({ ...data })
  
 })
 
+//получение информации о пользователе
 router.get('/profile', auth, async (req, res) => {
-    const user = req.user
+   const user = req.user
     res.json({
       ...helper.serializeUser(user),
     })
   })
-  .patch('/profile', auth, async (req, res) => {
-    console.log(`PATH: req.body: `)
+//обновление информации о пользователе
+router.patch('/profile', auth, function(req, res){
     
-      
-    
-  })
+    const userId = req.user.id
+    const form = new formidable.IncomingForm()
+    const upload = path.join('./uploads', 'assets', 'img')
+    form.uploadDir = upload
+    form.parse(req, function (err, fields, files) {
+      if (err) {
+        return next(err)
+      } 
+      if(files.avatar) {
+        const fileName = path.join(upload, files.avatar.originalFilename)
+        fs.rename(files.avatar.filepath, fileName, function (err) {
+                    
+        const src = path.join('./', 'assets','img', files.avatar.originalFilename)
+        db.getUserById(userId)
+       .then(function(user){
+          user.firstName = fields.firstName
+          user.middleName = fields.middleName, 
+          user.surName = fields.surName, 
+          user.password = fields.newPassword,
+          user.image = src,
+          user.save()
+          .then(function(updateUser){
+            res.send(updateUser)
+          })
+          .catch(function (err){
+            return res.status(401).json({message: err});
+          })
 
-// получение списка новостей. Необходимо вернуть список всех новостей из базы данных.
- router.get('/news', async(req, res) => {
-  const news = await db.getNews()
-  console.log(news.length)
-  return res.json(news)
-  // новости получаю от сервера, но как из правильно отрендерить не понимаю?
-
+        })
+        })
+      } else {
+        db.getUserById(userId)
+        .then(function(user){
+           user.firstName = fields.firstName
+           user.middleName = fields.middleName, 
+           user.surName = fields.surName, 
+           user.password = fields.newPassword,
+           user.save()
+           .then(function(updateUser){
+             res.send(updateUser)
+           })
+           .catch(function (err){
+             return res.status(401).json({message: err});
+           })
+                      
+         })
+      }
+    })
 })
 
 
+// получение списка новостей.
+ router.get('/news', async(req, res) => {
+  try {
+    const data = await db.getNews()
+     
+    function serializeNews (item) {
+      return {
+        id: item._id,
+        title: item.title,
+        text: item.text,
+        created_at: item.created_at,
+        user: item.user
+      }
+    }
+ 
+    const newNews = data.map((item) => serializeNews(item))
+    return res.json(newNews)
+  } catch (error) {
+    console.log(error)
+  }
+  
+  
+  
+ })
 
-// создание новой новости. Сигнатура запроса: { text, title }. Необходимо вернуть обновленный список всех новостей из базы данных.
-router.post('/news', async(req, res) => {
-  const newNews = await db.createNews(req.body)
-  return res.json(newNews)
+
+// создание новой новости.
+router.post('/news', auth, async (req, res) => {
+  
+  try {
+    const userId = req.user.id
+    const user = await db.getUserById(userId)
+    const newNews = await db.createNews(req.body, user)
+    const data = await db.getNews()
+    
+    function serializeNews (item) {
+      return {
+        id: item._id,
+        title: item.title,
+        text: item.text,
+        created_at: item.created_at,
+        user: item.user
+      }
+    }
+   
+   const news = data.map((item) => serializeNews(item))
+   return res.json(news)
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+//обновление существующей новости.
+router.patch('/news/:id', async (req, res) => {
+  
+  try {
+    const updateNews = await db.updateNews(req.params.id, {
+      title: req.body.title,
+      text: req.body.text
+    })
+    const data = await db.getNews()
+    
+    function serializeNews (item) {
+      return {
+        id: item._id,
+        title: item.title,
+        text: item.text,
+        created_at: item.created_at,
+        user: item.user
+      }
+    }
+   
+    const newNews = data.map((item) => serializeNews(item))
+    return res.json(newNews)
+  } catch (error) {
+    console.log(error)
+  }
  
 })
 
-//обновление существующей новости. Сигнатура запроса: { text, title }. Необходимо вернуть обновленный список всех новостей из базы данных.
-router.patch('/news/:id')
+//удаление существующей новости.
+router.delete('/news/:id', async (req, res) => {
+   
+  try {
+    const deleteNews = await db.deleteNews(req.params.id)
+    const data = await db.getNews()
+     
+     function serializeNews (item) {
+       return {
+         id: item._id,
+         title: item.title,
+         text: item.text,
+         created_at: item.created_at,
+         user: item.user
+       }
+     }
+    
+    const newNews = data.map((item) => serializeNews(item))
+    return res.json(newNews)
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+// получение списка пользователей
+router.get('/users', async(req, res) => {
+  try {
+    const data = await db.getUsers()
+     
+    function serializeUsers (item) {
+      return {
+        firstName: item.firstName,
+        id: item._id,
+        image: item.image,
+        middleName: item.middleName,
+        permission: item.permission,
+        surName: item.surName,
+        username: item.username,
+      }
+    }
+   
+    const users = data.map((item) => serializeUsers(item))
+    return res.json(users)
+  } catch (error) {
+    console.log(error)
+  }
+})
 
 
 // удаление пользователя
 router.delete('/users/:id', async (req, res) => {
-  db.deleteUser(user.id)
+  try {
+    const deleteUser = await db.deleteUser(req.params.id)
+    const data = await db.getUsers()
+     
+    function serializeUsers (item) {
+      return {
+        firstName: item.firstName,
+        id: item._id,
+        image: item.image,
+        middleName: item.middleName,
+        permission: item.permission,
+        surName: item.surName,
+        username: item.username,
+      }
+    }
+ 
+    const users = data.map((item) => serializeUsers(item))
+    return res.json(users)
+  } catch (error) {
+    console.log(error)
+  }
+  
+  
+  
+
 })
 
-// получение списка пользователей. Необходимо вернуть список всех пользоватлей из базы данных
-router.get('/users', async (req, res) => {
-  const users = await db.getUsers()
-  res.json(users)
+// обновление существующей записи о разрешениях конкретного пользователя. Сигнатура:
 
+router.patch('/users/:id/permission', async (req, res) => {
+  
+  try {
+    const updateUser = await db.updateUser(req.params.id, {
+      permission: req.body.permission,
+    })
+  
+    const data = await db.getUsers()
+       
+    function serializeUsers (item) {
+      return {
+        firstName: item.firstName,
+        id: item._id,
+        image: item.image,
+        middleName: item.middleName,
+        permission: item.permission,
+        surName: item.surName,
+        username: item.username,
+      }
+    }
+   
+   const users = data.map((item) => serializeUsers(item))
+  
+   return res.json(users)
+  } catch (error) {
+    console.log(error)
+  }
 })
-
-
-
-// PATCH-запрос на /api/users/:id/permission - обновление существующей записи о разрешениях конкретного пользователя. Сигнатура:
-
-router.patch('/users/:id/permission')
-
-
-
-
-
 
 
 

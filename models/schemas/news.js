@@ -4,13 +4,17 @@ const Schema = mongoose.Schema
 
 const newsSchema = new Schema(
     {
-        
-        text: {
-            type: String,
-        },
-        title: {
-            type: String,
-        },
+        id: String,
+        text: String,
+        title: String,
+        user: {
+            firstName: String,
+            id: String,
+            image: String,
+            middleName: String,
+            surName: String,
+            username: String
+        }
        
     },
     {

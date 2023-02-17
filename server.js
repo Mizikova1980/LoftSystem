@@ -25,7 +25,7 @@ app.use(function (_, res, next) {
 
 
 app.use(express.static(path.join(__dirname, 'build')))
-app.use(express.static(path.join(__dirname, 'upload')))
+app.use(express.static(path.join(__dirname, 'uploads')))
 
 
 require('./auth/passport')

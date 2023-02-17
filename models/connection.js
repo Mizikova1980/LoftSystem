@@ -1,8 +1,8 @@
 const mongoose = require('mongoose')
+require('dotenv').config()
 
-//let uri = 'mongodb+srv://Yuliya:14012016Makar@loft.8ovzlmu.mongodb.net/?retryWrites=true&w=majority'
 
-let uri = 'mongodb://localhost:27017/loft'
+let uri = process.env.uriDb
 
 mongoose.Promise =global.Promise
 // mongoose.set('useFindAndModify', false)
@@ -17,6 +17,7 @@ mongoose.connect(uri, {
 
 mongoose.connection.on('connected', () => {
   console.log(`Mongoose connection open`)
+  
 })
 
 mongoose.connection.on('error', (err) => {

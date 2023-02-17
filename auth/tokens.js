@@ -2,8 +2,12 @@ const jwt = require('jsonwebtoken')
 const _ = require('lodash')
 const helper = require('./../helpers/serialize')
 const models = require('./../models')
+const User = require('../models/schemas/user')
+require('dotenv').config()
 
-const SECRET = 'secret'
+
+
+const SECRET = process.env.SECRET
 
 const createTokens = async (user) => {
   const createToken = await jwt.sign(
@@ -25,9 +29,17 @@ const createTokens = async (user) => {
       expiresIn: '2m',
     },
   )
-  // TODO: save refreshToken to DB
+
   const verifyToken = jwt.decode(createToken, SECRET)
   const verifyRefresh = jwt.decode(createRefreshToken, SECRET)
+
+  models.updateUser(user.id, {
+    accessToken: createToken,
+    refreshToken: createRefreshToken,
+    accessTokenExpiredAt: verifyToken.exp * 1000,
+    refreshTokenExpiredAt: verifyRefresh.exp * 10000,
+  })
+
 
   return {
     accessToken: createToken,
@@ -39,7 +51,7 @@ const createTokens = async (user) => {
 
 const refreshTokens = async (refreshToken) => {
   const user = await getUserByToken(refreshToken)
-  if (user) {
+  if (user && user.refreshToken === refreshToken) {
     // (user && user.refreshToken === refreshToken)
     return {
       ...helper.serializeUser(user),

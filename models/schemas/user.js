@@ -19,8 +19,8 @@ const userSchema = new Schema(
       },
       username: {
         type: String,
-        //required: [true, 'username required'],
-        //unique: true,
+        required: [true, 'username required'],
+        unique: true,
       },
       permission: {
         chat: { C: Boolean, R: Boolean, U: Boolean, D: Boolean },
@@ -31,7 +31,10 @@ const userSchema = new Schema(
         type: String,
         required: [true, 'Password required'],
       },
-      // refreshToken
+      accessToken: String,
+      refreshToken: String,
+      accessTokenExpiredAt: Date,
+      refreshTokenExpiredAt: Date,
     },
     {
       versionKey: false,

@@ -21,8 +21,8 @@ module.exports.serializeUser = (user) => {
       id: news._id,
       title: news.title,
       text: news.text,
-      //created_at: news.created_at,
-      //user: news.user,
+      created_at: news.created_at,
+      user: news.user,
     }
   }
   
