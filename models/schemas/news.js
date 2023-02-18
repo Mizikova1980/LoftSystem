@@ -7,15 +7,7 @@ const newsSchema = new Schema(
         id: String,
         text: String,
         title: String,
-        user: {
-            firstName: String,
-            id: String,
-            image: String,
-            middleName: String,
-            surName: String,
-            username: String
-        }
-       
+        user: String,
     },
     {
         versionKey: false,
@@ -24,5 +16,8 @@ const newsSchema = new Schema(
 )
 
 const News = mongoose.model('news', newsSchema)
+
+
+
 
 module.exports = News

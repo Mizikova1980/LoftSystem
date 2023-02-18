@@ -63,14 +63,7 @@ module.exports.createNews = async (data, user) => {
    const newNews = new News ({
       text: data.text,
       title: data.title,
-      user: {
-          firstName: user.firstName,
-          id: user.id,
-          image: user.image,
-          middleName: user.middleName,
-          surName: user.surName,
-          username: user.username
-      }
+      user: user.id
 })
    const news = await newNews.save()
    console.log(news)
